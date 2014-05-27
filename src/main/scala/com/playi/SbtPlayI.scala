@@ -7,9 +7,9 @@ import com.amazonaws.services.s3.model.Region
 import ohnosequences.sbt._
 import ohnosequences.sbt.SbtS3Resolver._
 
-object SbtPlayI extends AutoPlugin {
+object SbtPlayI extends Plugin {
 
-  override def projectSettings = Seq(
+  override def projectSettings = S3Resolver.defaults ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
     shellPrompt  := ShellPrompt.buildShellPrompt,
@@ -20,7 +20,7 @@ object SbtPlayI extends AutoPlugin {
       "-Xlint",
       "-Ywarn-dead-code",
       "-language:_",
-      "-target:jvm-1.8",
+      "-target:jvm-1.7",
       "-encoding", "UTF-8"
     ),
 
@@ -81,7 +81,7 @@ object ShellPrompt {
     (state: State) => {
       val currProject = Project.extract (state).currentRef.project
       s"[\033[36m${currProject}${scala.Console.RESET}] " +
-      s"\033[32m\033[4m${currBranch}${scala.Console.RESET} >"
+      s"\033[32m\033[4m${currBranch}${scala.Console.RESET} > "
     }
   }
 }
