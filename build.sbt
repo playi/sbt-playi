@@ -1,5 +1,10 @@
 import sbt._
 import Keys._
+import com.amazonaws.services.s3.model.Region
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import ohnosequences.sbt._
+import ohnosequences.sbt.SbtS3Resolver._
+
 
 sbtPlugin := true
 
@@ -27,5 +32,21 @@ libraryDependencies ++= Seq(
   "org.joda" % "joda-convert" % "1.2"
 )
 
+S3Resolver.defaults
 
+// S3 Resolver settings
+s3credentials := new DefaultAWSCredentialsProviderChain()
+
+isSnapshot                  := true
+
+publishMavenStyle           := false
+
+publishArtifact in Test     := false
+
+s3region                    := Region.US_West
+
+publishTo                   := {
+  val target = if(isSnapshot.value) "snapshots" else "releases"
+  Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
+}
 

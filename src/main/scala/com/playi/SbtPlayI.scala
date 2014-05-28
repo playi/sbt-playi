@@ -6,8 +6,13 @@ import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
 import ohnosequences.sbt._
 import ohnosequences.sbt.SbtS3Resolver._
+import com.typesafe.sbt.S3Plugin._
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.typesafe.sbt.SbtNativePackager._
+import NativePackagerKeys._
 
 object SbtPlayI extends Plugin {
+  val s3Repo = "playi-repo.s3.amazonaws.com"
 
   override def projectSettings = S3Resolver.defaults ++ Seq(
     organization := "com.playi",
@@ -34,7 +39,18 @@ object SbtPlayI extends Plugin {
       val target = if(isSnapshot.value) "snapshots" else "releases"
       Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
     }
-  ) 
+  ) ++ s3Settings ++ Seq(
+    S3.progress in S3.upload := true,
+    mappings in S3.upload := {
+      val tgzFileName = s"${name.value}-${version.value}.tgz"
+      Seq((new java.io.File(s"target/universal/${tgzFileName}"), s"${organization.value}/${name.value}/${version.value}/${tgzFileName}"))
+    },
+    S3.host in S3.upload := s3Repo,
+    credentials += {
+      val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
+      Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
+    }
+  )
 
 
   def addSnapshot(versionStr: String): String = {
