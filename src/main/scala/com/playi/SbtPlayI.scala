@@ -19,6 +19,7 @@ object SbtPlayI extends Plugin {
   override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
+    version := getSHA(),
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
     scalacOptions ++= Seq(
@@ -50,7 +51,7 @@ object SbtPlayI extends Plugin {
       val target = if(isSnapshot.value) "snapshots" else "releases"
       Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
     },
-    jarName in assembly := s"${name.value}-${getSHA()}.jar"
+    jarName in assembly := s"${name.value}-${version.value}.jar"
   ) ++ s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     mappings in S3.upload := {
