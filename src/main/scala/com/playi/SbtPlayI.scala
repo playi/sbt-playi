@@ -4,6 +4,7 @@ import sbt._
 import Keys._
 import sbtassembly.Plugin.AssemblyKeys._
 import sbtassembly.Plugin.assemblySettings
+import sbtassembly.Plugin.MergeStrategy
 import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
 import ohnosequences.sbt._
@@ -30,6 +31,15 @@ object SbtPlayI extends Plugin {
       "-encoding", "UTF-8"
     ),
 
+    //sbt-assembly settings
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+      {
+        case "application.conf"                => MergeStrategy.concat
+        case "logback.xml" | "logger.xml"      => MergeStrategy.discard
+        case x => old(x)
+      }
+    },
+
     // S3 Resolver settings
     s3credentials := new DefaultAWSCredentialsProviderChain(),
     isSnapshot                  := true,
@@ -40,7 +50,7 @@ object SbtPlayI extends Plugin {
       val target = if(isSnapshot.value) "snapshots" else "releases"
       Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
     },
-    jarName in assembly := "${id}.jar"
+    jarName in assembly := s"${name.value}-${getSHA()}.jar"
   ) ++ s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     mappings in S3.upload := {
@@ -77,7 +87,7 @@ object SbtPlayI extends Plugin {
     def buffer[T] (f: => T): T = f
   }
 
-  def getSHA(): String = ("git log --format='%h' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
+  def getSHA(): String = ("git log --format='%H' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
 }
 
 /********************************************************************
