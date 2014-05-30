@@ -2,19 +2,20 @@ package com.playi
 
 import sbt._
 import Keys._
+import sbtassembly.Plugin.AssemblyKeys._
+import sbtassembly.Plugin.assemblySettings
 import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
 import ohnosequences.sbt._
 import ohnosequences.sbt.SbtS3Resolver._
 import com.typesafe.sbt.S3Plugin._
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import com.typesafe.sbt.SbtNativePackager._
-import NativePackagerKeys._
+
 
 object SbtPlayI extends Plugin {
   val s3Repo = "playi-repo.s3.amazonaws.com"
 
-  override def projectSettings = S3Resolver.defaults ++ Seq(
+  override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
     shellPrompt  := ShellPrompt.buildShellPrompt,
@@ -38,7 +39,8 @@ object SbtPlayI extends Plugin {
     publishTo                   := {
       val target = if(isSnapshot.value) "snapshots" else "releases"
       Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
-    }
+    },
+    jarName in assembly := "${id}.jar"
   ) ++ s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     mappings in S3.upload := {
