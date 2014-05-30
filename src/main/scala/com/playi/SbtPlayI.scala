@@ -56,8 +56,8 @@ object SbtPlayI extends Plugin {
   ) ++ s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     mappings in S3.upload := {
-      val tgzFileName = s"${name.value}-${version.value}.tgz"
-      Seq((new java.io.File(s"target/universal/${tgzFileName}"), s"${organization.value}/${name.value}/${version.value}/${tgzFileName}"))
+      val fName = jarName in assembly
+      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/${version.value}/$jarName"))
     },
     S3.host in S3.upload := s3Repo,
     credentials += {
