@@ -20,6 +20,7 @@ object SbtPlayI extends Plugin {
     organization := "com.playi",
     organizationName := "com.playi",
     version := getSHA(),
+    crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
     scalacOptions ++= Seq(
