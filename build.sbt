@@ -17,7 +17,8 @@ version := "1.0"
 isSnapshot := false
 
 resolvers ++= Seq("Typesafe Plugin Repository" at "http://repo.typesafe.com/typesafe/releases/",
-  "Era7 maven releases" at "http://releases.era7.com.s3.amazonaws.com"
+                  "Era7 maven releases"        at "http://releases.era7.com.s3.amazonaws.com",
+                  "SBT plugin releases"        at "http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases/"
 )
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.11.2")
@@ -27,6 +28,8 @@ addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.11.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.7")
 
 addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
+
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
 
 // This included to get rid of that stoopid NPE when starting sbt
 libraryDependencies ++= Seq(

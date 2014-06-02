@@ -11,7 +11,10 @@ import ohnosequences.sbt._
 import ohnosequences.sbt.SbtS3Resolver._
 import com.typesafe.sbt.S3Plugin._
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-
+import sbtrelease._
+import sbtrelease.ReleasePlugin._
+import sbtrelease.ReleasePlugin.ReleaseKeys._
+import ReleaseStateTransformations._
 
 object SbtPlayI extends Plugin {
   val s3Repo = "playi-repo.s3.amazonaws.com"
@@ -19,7 +22,6 @@ object SbtPlayI extends Plugin {
   override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
-    version := getSHA(),
     crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
@@ -64,8 +66,27 @@ object SbtPlayI extends Plugin {
       val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
       Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
     }
+  ) ++ releaseSettings ++ Seq(
+    releaseProcess := Seq[ReleaseStep](
+      checkSnapshotDependencies,    // : ReleaseStep
+      inquireVersions,              // : ReleaseStep
+      runTest,                      // : ReleaseStep
+      setReleaseVersion,            // : ReleaseStep
+      commitReleaseVersion,         // : ReleaseStep, performs the initial git checks
+      tagRelease,                   // : ReleaseStep
+      releaseTask[File](assembly),
+      releaseTask[Unit](S3.upload),
+      setNextVersion,               // : ReleaseStep
+      commitNextVersion,            // : ReleaseStep
+      pushChanges                   // : ReleaseStep, also checks that an upstream branch is properly configured 
+    )
   )
 
+  //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
+  def releaseTask[T](key: TaskKey[T]) = { st: State =>
+    Project.extract(st).runTask(key, st)
+    st
+  }
 
   def addSnapshot(versionStr: String): String = {
     import java.util.Calendar
