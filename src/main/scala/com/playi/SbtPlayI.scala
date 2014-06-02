@@ -11,15 +11,14 @@ import ohnosequences.sbt._
 import ohnosequences.sbt.SbtS3Resolver._
 import com.typesafe.sbt.S3Plugin._
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-
+import sbtrelease.ReleasePlugin._
 
 object SbtPlayI extends Plugin {
   val s3Repo = "playi-repo.s3.amazonaws.com"
 
-  override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
+  override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ releaseSettings ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
-    version := getSHA(),
     crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
@@ -64,7 +63,7 @@ object SbtPlayI extends Plugin {
       val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
       Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
     }
-  )
+  ) 
 
 
   def addSnapshot(versionStr: String): String = {
@@ -111,7 +110,7 @@ object ShellPrompt {
     (state: State) => {
       val currProject = Project.extract (state).currentRef.project
       s"[\033[36m${currProject}${scala.Console.RESET}] " +
-      s"\033[32m\033[4m${currBranch}${scala.Console.RESET} > "
+      s"\033[32m\033[4m${currBranch} ${version}${scala.Console.RESET} > "
     }
   }
 }
