@@ -22,6 +22,7 @@ object SbtPlayI extends Plugin {
   override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
     organization := "com.playi",
     organizationName := "com.playi",
+    version := getSHA(),
     crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
@@ -59,7 +60,14 @@ object SbtPlayI extends Plugin {
     S3.progress in S3.upload := true,
     mappings in S3.upload := {
       val fName = assembly.value.getName
-      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/${version.value}/$fName"))
+      currBranch match {
+        case "prod" =>
+          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
+          (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+        case "master" => //master is dev branch. less chance of errors
+          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+        case b => throw new java.lang.IllegalArgumentException(s"the branch '$b', does not match 'master' or 'prod'.")
+      }
     },
     S3.host in S3.upload := s3Repo,
     credentials += {
@@ -68,17 +76,9 @@ object SbtPlayI extends Plugin {
     }
   ) ++ releaseSettings ++ Seq(
     releaseProcess := Seq[ReleaseStep](
-      checkSnapshotDependencies,    // : ReleaseStep
-      inquireVersions,              // : ReleaseStep
-      runTest,                      // : ReleaseStep
-      setReleaseVersion,            // : ReleaseStep
-      commitReleaseVersion,         // : ReleaseStep, performs the initial git checks
-      tagRelease,                   // : ReleaseStep
+//      runTest,                      // : ReleaseStep
       releaseTask[File](assembly),
-      releaseTask[Unit](S3.upload),
-      setNextVersion,               // : ReleaseStep
-      commitNextVersion,            // : ReleaseStep
-      pushChanges                   // : ReleaseStep, also checks that an upstream branch is properly configured 
+      releaseTask[Unit](S3.upload)
     )
   )
 
@@ -111,7 +111,13 @@ object SbtPlayI extends Plugin {
   }
 
   def getSHA(): String = ("git log --format='%H' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
+
+  def currBranch = {
+    val current = """\*\s+(\w+)""".r
+    "git branch --no-color".lines_!.collect { case current(name) => name }.mkString
+  }
 }
+
 
 /********************************************************************
 *   Configures the ShellPrompt inside sbt/activator
@@ -123,16 +129,11 @@ object ShellPrompt {
     def buffer[T] (f: => T): T = f
   }
 
-  def currBranch = (
-    ("git branch" lines_! devnull headOption)
-      getOrElse "-" stripPrefix "* "
-  )
-
   val buildShellPrompt = {
     (state: State) => {
       val currProject = Project.extract (state).currentRef.project
       s"[\033[36m${currProject}${scala.Console.RESET}] " +
-      s"\033[32m\033[4m${currBranch}${scala.Console.RESET} > "
+      s"\033[32m\033[4m${SbtPlayI.currBranch}${scala.Console.RESET} > "
     }
   }
 }
