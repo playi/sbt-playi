@@ -2,28 +2,16 @@ package com.playi
 
 import sbt._
 import Keys._
-import sbtassembly.Plugin.AssemblyKeys._
-import sbtassembly.Plugin.assemblySettings
-import sbtassembly.Plugin.MergeStrategy
 import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
-import ohnosequences.sbt._
-import ohnosequences.sbt.SbtS3Resolver._
-import com.typesafe.sbt.S3Plugin._
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
-import sbtrelease._
-import sbtrelease.ReleasePlugin._
-import sbtrelease.ReleasePlugin.ReleaseKeys._
-import ReleaseStateTransformations._
 
 object SbtPlayI extends Plugin {
-  import TgzAssembly.TgzAssemblyKeys._
-  val s3Repo = "playi-repo.s3.amazonaws.com"
 
-  override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
+  val coreBuildSettings = Seq(
     organization := "com.playi",
     organizationName := "com.playi",
-    version := getSHA(),
+    version := PlayIUtil.getSHA(),
     crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
     resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
@@ -35,59 +23,27 @@ object SbtPlayI extends Plugin {
       "-language:_",
       "-target:jvm-1.7",
       "-encoding", "UTF-8"
-    ),
-
-    //sbt-assembly settings
-    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
-      {
-        case "application.conf"                => MergeStrategy.concat
-        case "logback.xml" | "logger.xml"      => MergeStrategy.discard
-        case x => old(x)
-      }
-    },
-
-    // S3 Resolver settings
-    s3credentials := new DefaultAWSCredentialsProviderChain(),
-    isSnapshot                  := true,
-    publishMavenStyle           := false,
-    publishArtifact in Test     := false,
-    s3region                    := Region.US_West,
-    publishTo                   := {
-      val target = if(isSnapshot.value) "snapshots" else "releases"
-      Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
-    },
-    jarName in assembly := s"${name.value}-${version.value}.jar"
-  ) ++ s3Settings ++ Seq(
-    S3.progress in S3.upload := true,
-    mappings in S3.upload := {
-      val fName = assembly.value.getName
-      currBranch match {
-        case "prod" =>
-          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
-          (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
-        case "master" => //master is dev branch. less chance of errors
-          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
-        case b => throw new java.lang.IllegalArgumentException(s"the branch '$b', does not match 'master' or 'prod'.")
-      }
-    },
-    S3.host in S3.upload := s3Repo,
-    credentials += {
-      val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
-      Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
-    }
-  ) ++ releaseSettings ++ Seq(
-    releaseProcess := Seq[ReleaseStep](
-//      runTest,                      // : ReleaseStep
-      releaseTask[File](assembly),
-      releaseTask[File](tgzAssembly),
-      releaseTask[Unit](S3.upload)
     )
   )
 
-  //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
-  def releaseTask[T](key: TaskKey[T]) = { st: State =>
-    Project.extract(st).runTask(key, st)
-    st
+  override def projectSettings = 
+    coreBuildSettings       ++ 
+    PlayIAssembly.settings  ++ 
+    Resolvers.settings      ++ 
+    PlayIS3Upload.settings  ++ PlayIRelease.settings
+}
+
+
+
+object PlayIUtil {
+
+  // ---
+  // Helper Functions
+  // ---
+  object devnull extends ProcessLogger {
+    def info (s: => String) {}
+    def error (s: => String) { }
+    def buffer[T] (f: => T): T = f
   }
 
   def addSnapshot(versionStr: String): String = {
@@ -106,12 +62,6 @@ object SbtPlayI extends Plugin {
     versionStr + dateStr
   }
 
-  object devnull extends ProcessLogger {
-    def info (s: => String) {}
-    def error (s: => String) { }
-    def buffer[T] (f: => T): T = f
-  }
-
   def getSHA(): String = ("git log --format='%H' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
 
   def currBranch = {
@@ -120,6 +70,50 @@ object SbtPlayI extends Plugin {
       "git branch --no-color".lines_!.collect { case current(name) => name }.mkString
     })
   }
+
+}
+
+
+/********************************************************************
+*   Configures the Release settings 
+********************************************************************/
+object PlayIRelease {
+
+  import sbtrelease._
+  import sbtrelease.ReleaseStep
+  import sbtrelease.ReleasePlugin._
+  import sbtrelease.ReleasePlugin.ReleaseKeys._
+  import ReleaseStateTransformations._
+  import sbtassembly.Plugin.AssemblyKeys._
+  import com.typesafe.sbt.S3Plugin._
+
+  lazy val assemblyTgz = taskKey[java.io.File]("package the assembled jar into a tgz for OpsWorks")
+
+  //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
+  def releaseTask[T](key: TaskKey[T]) = { state: State =>
+    Project.extract(state).runTask(key, state)
+    state
+  }
+
+  val releaseSteps = Seq[ReleaseStep](
+    //      runTest,                      // : ReleaseStep
+    releaseTask[File](assembly),
+    releaseTask[File](assemblyTgz),
+    releaseTask[Unit](S3.upload)
+  )
+
+  val settings = releaseSettings ++ Seq(
+    releaseProcess := releaseSteps,
+    assemblyTgz := {
+      val jarFile = assembly.value
+      val tgzFile = new java.io.File(s"target/${name.value}-${version.value}.tgz")
+      s"tar -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getAbsolutePath}" ! match {
+        case 0 => ()
+        case error => sys.error(s"Error tarballing $tgzFile. Exit code: $error")
+      }
+      tgzFile
+    }
+  )
 }
 
 
@@ -127,45 +121,39 @@ object SbtPlayI extends Plugin {
 *   Configures the ShellPrompt inside sbt/activator
 ********************************************************************/
 object ShellPrompt {
-  object devnull extends ProcessLogger {
-    def info (s: => String) {}
-    def error (s: => String) { }
-    def buffer[T] (f: => T): T = f
-  }
 
   val buildShellPrompt = {
     (state: State) => {
       val currProject = Project.extract (state).currentRef.project
       s"[\033[36m${currProject}${scala.Console.RESET}] " +
-      s"\033[32m\033[4m${SbtPlayI.currBranch}${scala.Console.RESET} > "
+      s"\033[32m\033[4m${PlayIUtil.currBranch}${scala.Console.RESET} > "
     }
   }
 }
 
-
-object TgzAssembly /*extends Plugin*/ {
-  object TgzAssemblyKeys {
-    lazy val tgzAssembly = taskKey[java.io.File]("packages the assembly jar into a tgz")
-  }
-
-  import TgzAssemblyKeys._
-
-  tgzAssembly := {
-    val jarFile = assembly.value
-    val tgzFile = new java.io.File(s"target/${name.value}-${version.value}.tgz")
-    s"tar -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getAbsolutePath}" ! match {
-      case 0 => ()
-      case error => sys.error(s"Error tarballing $tgzFile. Exit code: $error")
-    }
-    tgzFile
-  }
-}
 
 
 /********************************************************************
 *   Define all the places we look for artifacts ie our resolvers
 ********************************************************************/
 object Resolvers {
+
+  import ohnosequences.sbt._
+  import ohnosequences.sbt.SbtS3Resolver._
+
+  val settings = S3Resolver.defaults ++ Seq(
+    // S3 Resolver settings
+    s3credentials := new DefaultAWSCredentialsProviderChain(),
+    isSnapshot                  := true,
+    publishMavenStyle           := false,
+    publishArtifact in Test     := false,
+    s3region                    := Region.US_West,
+    publishTo                   := {
+      val target = if(isSnapshot.value) "snapshots" else "releases"
+      Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
+    }
+  )
+
   //val sunrepo           = "Sun Maven2 Repo"       at "http://download.java.net/maven/2"
   val typesafeReleases  = "Typesafe Releases"     at "http://repo.typesafe.com/typesafe/releases/"
   val typesafeSnapshots = "Typesafe Snapshots"    at "http://repo.typesafe.com/typesafe/snapshots/"
@@ -180,4 +168,60 @@ object Resolvers {
   val playISnapshots: Def.Initialize[Resolver] = Def.setting {
     toSbtResolver( s3resolver.value("PlayI Snapshots", s3("playi-snapshots")).withIvyPatterns )
   }
+}
+
+
+
+
+/********************************************************************
+*   Setup the default settings for the assembly plugin
+********************************************************************/
+object PlayIAssembly {
+  import sbtassembly.Plugin.AssemblyKeys._
+  import sbtassembly.Plugin.assemblySettings
+  import sbtassembly.Plugin.MergeStrategy
+
+  val settings = assemblySettings ++ Seq(
+    jarName in assembly := s"${name.value}-${version.value}.jar",
+    mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+      {
+        case "application.conf"                => MergeStrategy.concat
+        case "logback.xml" | "logger.xml"      => MergeStrategy.discard
+        case x => old(x)
+      }
+    }
+  )
+}
+
+
+/********************************************************************
+*   Configuration for our S3 upload tasks
+********************************************************************/
+object PlayIS3Upload {
+
+  import com.typesafe.sbt.S3Plugin._
+  import sbtassembly.Plugin.AssemblyKeys._
+
+  val s3Repo = "playi-repo.s3.amazonaws.com"
+  val settings = s3Settings ++ Seq(
+    S3.progress in S3.upload := true,
+    mappings in S3.upload := {
+      val fName = assembly.value.getName
+      PlayIUtil.currBranch match {
+        case "prod" =>
+          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
+          (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+
+        case "master" => //master is dev branch. less chance of errors
+          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+
+        case b => throw new java.lang.IllegalArgumentException(s"the branch '$b', does not match 'master' or 'prod'.")
+      }
+    },
+    S3.host in S3.upload := s3Repo,
+    credentials += {
+      val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
+      Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
+    }
+  ) 
 }
