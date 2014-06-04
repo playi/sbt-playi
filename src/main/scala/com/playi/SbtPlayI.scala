@@ -106,7 +106,7 @@ object PlayIRelease {
     assemblyTgz := {
       val jarFile = assembly.value
       val tgzFile = new java.io.File(s"target/${name.value}-${version.value}.tgz")
-      s"tar -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getAbsolutePath}" ! match {
+      s"tar -C target -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getName}" ! match {
         case 0 => ()
         case error => sys.error(s"Error tarballing $tgzFile. Exit code: $error")
       }
@@ -198,6 +198,7 @@ object PlayIAssembly {
 ********************************************************************/
 object PlayIS3Upload {
 
+  import PlayIRelease._
   import com.typesafe.sbt.S3Plugin._
   import sbtassembly.Plugin.AssemblyKeys._
 
@@ -215,16 +216,16 @@ object PlayIS3Upload {
 
   val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assembly.value
+      val fName = assemblyTgz.value.getName
       Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
-      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.tgz"))
     }
   )
 
   val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assembly.value
-      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+      val fName = assemblyTgz.value.getName
+      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.tgz"))
     }
   )
 
