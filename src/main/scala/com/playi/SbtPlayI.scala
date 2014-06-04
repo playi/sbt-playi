@@ -17,6 +17,7 @@ import sbtrelease.ReleasePlugin.ReleaseKeys._
 import ReleaseStateTransformations._
 
 object SbtPlayI extends Plugin {
+  import TgzAssembly.TgzAssemblyKeys._
   val s3Repo = "playi-repo.s3.amazonaws.com"
 
   override def projectSettings = S3Resolver.defaults ++ assemblySettings ++ Seq(
@@ -78,6 +79,7 @@ object SbtPlayI extends Plugin {
     releaseProcess := Seq[ReleaseStep](
 //      runTest,                      // : ReleaseStep
       releaseTask[File](assembly),
+      releaseTask[File](tgzAssembly),
       releaseTask[Unit](S3.upload)
     )
   )
@@ -141,6 +143,23 @@ object ShellPrompt {
 }
 
 
+object TgzAssembly /*extends Plugin*/ {
+  object TgzAssemblyKeys {
+    lazy val tgzAssembly = taskKey[java.io.File]("packages the assembly jar into a tgz")
+  }
+
+  import TgzAssemblyKeys._
+
+  tgzAssembly := {
+    val jarFile = assembly.value
+    val tgzFile = new java.io.File(s"target/${name.value}-${version.value}.tgz")
+    s"tar -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getAbsolutePath}" ! match {
+      case 0 => ()
+      case error => sys.error(s"Error tarballing $tgzFile. Exit code: $error")
+    }
+    tgzFile
+  }
+}
 
 
 /********************************************************************
