@@ -36,7 +36,6 @@ object SbtPlayI extends Plugin {
 
 
 object PlayIUtil {
-
   // ---
   // Helper Functions
   // ---
@@ -203,25 +202,40 @@ object PlayIS3Upload {
   import sbtassembly.Plugin.AssemblyKeys._
 
   val s3Repo = "playi-repo.s3.amazonaws.com"
-  val settings = s3Settings ++ Seq(
+  val branch = PlayIUtil.currBranch
+  val coreSettings = s3Settings ++ Seq(
     S3.progress in S3.upload := true,
-    mappings in S3.upload := {
-      val fName = assembly.value.getName
-      PlayIUtil.currBranch match {
-        case "prod" =>
-          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
-          (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
-
-        case "master" => //master is dev branch. less chance of errors
-          Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
-
-        case b => throw new java.lang.IllegalArgumentException(s"the branch '$b', does not match 'master' or 'prod'.")
-      }
-    },
     S3.host in S3.upload := s3Repo,
     credentials += {
       val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
       Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
     }
-  ) 
+  )
+
+
+  val settings = branch match {
+    case "prod"   => prodSettings 
+    case "master" => masterSettings
+    case other    => Seq( 
+      S3.upload := {
+        val log = streams.value.log
+        log.info(s"Skipping s3Upload because build is running against branch: $other")
+      }
+    )
+  }
+
+  val prodSettings = coreSettings ++ Seq(
+    mappings in S3.upload := {
+      val fName = assembly.value
+      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
+      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+    }
+  )
+
+  val masterSettings = coreSettings ++ Seq(
+    mappings in S3.upload := {
+      val fName = assembly.value
+      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+    }
+  )
 }
