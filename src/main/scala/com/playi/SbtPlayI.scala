@@ -213,17 +213,6 @@ object PlayIS3Upload {
   )
 
 
-  val settings = branch match {
-    case "prod"   => prodSettings 
-    case "master" => masterSettings
-    case other    => Seq( 
-      S3.upload := {
-        val log = streams.value.log
-        log.info(s"Skipping s3Upload because build is running against branch: $other")
-      }
-    )
-  }
-
   val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value
@@ -238,4 +227,20 @@ object PlayIS3Upload {
       Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
     }
   )
+
+  def defaultSettings(branchName: String) = Seq(
+      S3.upload := {
+        val log = streams.value.log
+        log.info(s"Skipping s3Upload because build is running against branch: $branchName")
+      }
+    )
+
+
+
+
+  val settings = branch match {
+    case "prod"   => prodSettings 
+    case "master" => masterSettings
+    case branch   => defaultSettings(branch)
+  }
 }
