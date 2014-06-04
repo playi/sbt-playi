@@ -86,8 +86,6 @@ object PlayIRelease {
   import sbtassembly.Plugin.AssemblyKeys._
   import com.typesafe.sbt.S3Plugin._
 
-  lazy val assemblyTgz = taskKey[java.io.File]("package the assembled jar into a tgz for OpsWorks")
-
   //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
   def releaseTask[T](key: TaskKey[T]) = { state: State =>
     Project.extract(state).runTask(key, state)
@@ -97,21 +95,11 @@ object PlayIRelease {
   val releaseSteps = Seq[ReleaseStep](
     //      runTest,                      // : ReleaseStep
     releaseTask[File](assembly),
-    releaseTask[File](assemblyTgz),
     releaseTask[Unit](S3.upload)
   )
 
   val settings = releaseSettings ++ Seq(
-    releaseProcess := releaseSteps,
-    assemblyTgz := {
-      val jarFile = assembly.value
-      val tgzFile = new java.io.File(s"target/${name.value}-${version.value}.tgz")
-      s"tar -C target -zpcvf ${tgzFile.getAbsolutePath} ${jarFile.getName}" ! match {
-        case 0 => ()
-        case error => sys.error(s"Error tarballing $tgzFile. Exit code: $error")
-      }
-      tgzFile
-    }
+    releaseProcess := releaseSteps
   )
 }
 
@@ -198,7 +186,6 @@ object PlayIAssembly {
 ********************************************************************/
 object PlayIS3Upload {
 
-  import PlayIRelease._
   import com.typesafe.sbt.S3Plugin._
   import sbtassembly.Plugin.AssemblyKeys._
 
@@ -216,16 +203,16 @@ object PlayIS3Upload {
 
   val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assemblyTgz.value.getName
+      val fName = assembly.value.getName
       Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
-      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.tgz"))
+      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
     }
   )
 
   val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assemblyTgz.value.getName
-      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.tgz"))
+      val fName = assembly.value.getName
+      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
     }
   )
 
