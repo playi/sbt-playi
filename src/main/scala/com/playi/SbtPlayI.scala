@@ -148,7 +148,7 @@ object Resolvers {
   val typesafeSnapshots = "Typesafe Snapshots"    at "http://repo.typesafe.com/typesafe/snapshots/"
   val mavenCentral      = "Maven Central"         at "http://repo1.maven.org/maven2"
 
-  val publicResolvers = Seq(typesafeReleases, typesafeSnapshots, mavenCentral)
+  val publicResolvers = Seq(mavenCentral, typesafeReleases, typesafeSnapshots)
 
   val playIReleases: Def.Initialize[Resolver] = Def.setting {
     toSbtResolver( s3resolver.value("PlayI Releases", s3("playi-releases")).withIvyPatterns )
