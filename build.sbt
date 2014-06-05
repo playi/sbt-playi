@@ -31,6 +31,8 @@ addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.6.0")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
 
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.4")   
+
 // This included to get rid of that stoopid NPE when starting sbt
 libraryDependencies ++= Seq(
   "org.joda" % "joda-convert" % "1.2"
