@@ -26,7 +26,7 @@ object SbtPlayI extends Plugin {
     )
   )
 
-  override def projectSettings = 
+  def PlayISettings = 
     coreBuildSettings       ++ 
     PlayIAssembly.settings  ++ 
     Resolvers.settings      ++ 
@@ -214,7 +214,7 @@ object PlayIS3Upload {
   val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value.getName
-      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+      Seq((assembly.value.getName, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
     }
   )
 
