@@ -214,7 +214,7 @@ object PlayIS3Upload {
   val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value.getName
-      Seq((assembly.value.getName, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+      Seq((assembly.value, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
     }
   )
 
