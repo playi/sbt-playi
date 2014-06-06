@@ -8,7 +8,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 
 object SbtPlayI extends Plugin {
 
-  val coreBuildSettings = Seq(
+  lazy val coreBuildSettings = Seq(
     organization := "com.playi",
     organizationName := "com.playi",
     version := PlayIUtil.getSHA(),
@@ -94,13 +94,13 @@ object PlayIRelease {
     state
   }
 
-  val releaseSteps = Seq[ReleaseStep](
+  lazy val releaseSteps = Seq[ReleaseStep](
     //      runTest,                      // : ReleaseStep
     releaseTask[File](assembly),
     releaseTask[Unit](S3.upload)
   )
 
-  val settings = releaseSettings ++ Seq(
+  lazy val settings = releaseSettings ++ Seq(
     releaseProcess := releaseSteps
   )
 }
@@ -170,7 +170,7 @@ object PlayIAssembly {
   import sbtassembly.Plugin.assemblySettings
   import sbtassembly.Plugin.MergeStrategy
 
-  val settings = assemblySettings ++ Seq(
+  lazy val settings = assemblySettings ++ Seq(
     jarName in assembly := s"${name.value}-${version.value}.jar",
     mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
       {
@@ -193,7 +193,7 @@ object PlayIS3Upload {
 
   val s3Repo = "playi-repo.s3.amazonaws.com"
   val branch = PlayIUtil.currBranch
-  val coreSettings = s3Settings ++ Seq(
+  lazy val coreSettings = s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     S3.host in S3.upload := s3Repo,
     credentials += {
@@ -203,7 +203,7 @@ object PlayIS3Upload {
   )
 
 
-  val prodSettings = coreSettings ++ Seq(
+  lazy val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value.getName
       Seq((assembly.value, s"${organization.value}/${name.value}/SHA1/$fName"),
@@ -211,7 +211,7 @@ object PlayIS3Upload {
     }
   )
 
-  val masterSettings = coreSettings ++ Seq(
+  lazy val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value.getName
       Seq((assembly.value, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
@@ -228,7 +228,7 @@ object PlayIS3Upload {
 
 
 
-  val settings = branch match {
+  lazy val settings = branch match {
     case "prod"   => prodSettings 
     case "master" => masterSettings
     case branch   => defaultSettings(branch)
