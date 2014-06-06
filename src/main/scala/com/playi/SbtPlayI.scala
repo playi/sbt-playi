@@ -206,8 +206,8 @@ object PlayIS3Upload {
   val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
       val fName = assembly.value.getName
-      Seq((new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/SHA1/$fName"),
-      (new java.io.File(s"target/$fName"), s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+      Seq((assembly.value, s"${organization.value}/${name.value}/SHA1/$fName"),
+      (assembly.value, s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
     }
   )
 
