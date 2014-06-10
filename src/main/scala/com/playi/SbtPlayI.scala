@@ -1,10 +1,12 @@
 package com.playi
 
 import sbt._
-import Keys._
+import sbt.Keys._
 import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.typesafe.sbt.SbtNativePackager._
+import NativePackagerKeys._
 
 object SbtPlayI extends Plugin {
 
@@ -28,7 +30,6 @@ object SbtPlayI extends Plugin {
 
   def PlayISettings = 
     coreBuildSettings       ++ 
-    PlayIAssembly.settings  ++ 
     Resolvers.settings      ++ 
     PlayIS3Upload.settings  ++ 
     PlayIRelease.settings   ++
@@ -85,8 +86,9 @@ object PlayIRelease {
   import sbtrelease.ReleasePlugin._
   import sbtrelease.ReleasePlugin.ReleaseKeys._
   import ReleaseStateTransformations._
-  import sbtassembly.Plugin.AssemblyKeys._
   import com.typesafe.sbt.S3Plugin._
+  import com.typesafe.sbt.SbtNativePackager._
+  import NativePackagerKeys._
 
   //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
   def releaseTask[T](key: TaskKey[T]) = { state: State =>
@@ -96,7 +98,7 @@ object PlayIRelease {
 
   lazy val releaseSteps = Seq[ReleaseStep](
     //      runTest,                      // : ReleaseStep
-    releaseTask[File](assembly),
+    releaseTask[File](packageZipTarball in Universal),
     releaseTask[Unit](S3.upload)
   )
 
@@ -160,11 +162,10 @@ object Resolvers {
 }
 
 
-
-
 /********************************************************************
 *   Setup the default settings for the assembly plugin
 ********************************************************************/
+/*
 object PlayIAssembly {
   import sbtassembly.Plugin.AssemblyKeys._
   import sbtassembly.Plugin.assemblySettings
@@ -181,6 +182,7 @@ object PlayIAssembly {
     }
   )
 }
+*/
 
 
 /********************************************************************
@@ -189,10 +191,10 @@ object PlayIAssembly {
 object PlayIS3Upload {
 
   import com.typesafe.sbt.S3Plugin._
-  import sbtassembly.Plugin.AssemblyKeys._
 
   val s3Repo = "playi-repo.s3.amazonaws.com"
   val branch = PlayIUtil.currBranch
+
   lazy val coreSettings = s3Settings ++ Seq(
     S3.progress in S3.upload := true,
     S3.host in S3.upload := s3Repo,
@@ -202,19 +204,22 @@ object PlayIS3Upload {
     }
   )
 
-
   lazy val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assembly.value.getName
-      Seq((assembly.value, s"${organization.value}/${name.value}/SHA1/$fName"),
-      (assembly.value, s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.jar"))
+      val tgzFile = (NativePackagerKeys.packageZipTarball).value
+      val fName = tgzFile.getName()
+      val sha = PlayIUtil.getSHA()
+      Seq((tgzFile, s"${organization.value}/${name.value}/$sha/$fName"),
+      (tgzFile, s"${organization.value}/${name.value}/RELEASE/${name.value}-RELEASE.tgz"))
     }
   )
 
   lazy val masterSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val fName = assembly.value.getName
-      Seq((assembly.value, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.jar"))
+      val log = streams.value.log
+      val tgzFile = (packageZipTarball in Universal).value
+      val fName = tgzFile.getName()
+      Seq((tgzFile, s"${organization.value}/${name.value}/SNAPSHOT/${name.value}-SNAPSHOT.tgz"))
     }
   )
 
@@ -224,8 +229,6 @@ object PlayIS3Upload {
         log.info(s"Skipping s3Upload because build is running against branch: $branchName")
       }
     )
-
-
 
 
   lazy val settings = branch match {
