@@ -75,6 +75,48 @@ object PlayIUtil {
 
 }
 
+/********************************************************************
+*   Configuration for creating a build-info file
+********************************************************************/
+object PlayIBuildInfo {
+  import java.io._
+
+  val buildInfoFile = settingKey[String]("Where to write the build info")
+  buildInfoFile := "src/main/resources/buildInfo.conf"
+
+  val buildInfo = taskKey[File]("A sample string task.")
+  buildInfo := {
+    val sha = PlayIUtil.getSHA()
+    val branch = PlayIUtil.currBranch
+    val buildDate = new java.util.Date().toLocaleString()
+    val buildHost = java.net.InetAddress.getLocalHost().getHostName()
+    val buildUser = System.getProperty("user.name", "????")
+
+    val file = new File(buildInfoFile.value)
+    val dir = file.getParentFile()
+    if(!dir.exists())
+      dir.mkdirs()
+
+    if(file.exists())
+      file.delete()
+    file.createNewFile()
+
+    val writer = new PrintWriter(file)
+    writer.write(s"""
+        | buildInfo = {
+        |   buildDate = $buildDate
+        |   buildHost = $buildHost
+        |   buildUser = $buildUser
+        |   branch = $branch
+        |   commit = $sha
+        | }
+        """.stripMargin
+    )
+    writer.close()
+    file
+  }
+}
+
 
 /********************************************************************
 *   Configures the Release settings 
