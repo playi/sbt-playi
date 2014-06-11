@@ -30,6 +30,7 @@ object SbtPlayI extends Plugin {
 
   def PlayISettings = 
     coreBuildSettings       ++ 
+    PlayIBuildInfo.settings ++ 
     Resolvers.settings      ++ 
     PlayIS3Upload.settings  ++ 
     PlayIRelease.settings   ++
@@ -80,15 +81,17 @@ object PlayIUtil {
 ********************************************************************/
 object PlayIBuildInfo {
   import java.io._
+  import java.util._
+  import java.text._
 
   val buildInfoFile = settingKey[String]("Where to write the build info")
-  buildInfoFile := "src/main/resources/buildInfo.conf"
+  val buildInfoFileSetting = buildInfoFile := "src/main/resources/buildInfo.conf"
 
   val buildInfo = taskKey[File]("A sample string task.")
-  buildInfo := {
+  val buildInfoTask = buildInfo := {
     val sha = PlayIUtil.getSHA()
     val branch = PlayIUtil.currBranch
-    val buildDate = new java.util.Date().toLocaleString()
+    val buildDate = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z").format(new Date)
     val buildHost = java.net.InetAddress.getLocalHost().getHostName()
     val buildUser = System.getProperty("user.name", "????")
 
@@ -102,19 +105,20 @@ object PlayIBuildInfo {
     file.createNewFile()
 
     val writer = new PrintWriter(file)
-    writer.write(s"""
-        | buildInfo = {
-        |   buildDate = $buildDate
-        |   buildHost = $buildHost
-        |   buildUser = $buildUser
-        |   branch = $branch
-        |   commit = $sha
+    writer.write(s"""playi.buildInfo = {
+        |   buildDate = "$buildDate"
+        |   buildHost = "$buildHost"
+        |   buildUser = "$buildUser"
+        |   branch = "$branch"
+        |   commit = "$sha"
         | }
         """.stripMargin
     )
     writer.close()
     file
   }
+
+  val settings: sbt.Def.SettingsDefinition = Seq(buildInfoFileSetting, buildInfoTask)
 }
 
 
