@@ -144,6 +144,7 @@ object PlayIRelease {
 
   lazy val releaseSteps = Seq[ReleaseStep](
     //      runTest,                      // : ReleaseStep
+    releaseTask[File](PlayIBuildInfo.buildInfo),
     releaseTask[File](packageZipTarball in Universal),
     releaseTask[Unit](S3.upload)
   )
