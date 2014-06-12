@@ -253,7 +253,7 @@ object PlayIS3Upload {
 
   lazy val prodSettings = coreSettings ++ Seq(
     mappings in S3.upload := {
-      val tgzFile = (NativePackagerKeys.packageZipTarball).value
+      val tgzFile = (packageZipTarball in Universal).value
       val fName = tgzFile.getName()
       val sha = PlayIUtil.getSHA()
       Seq((tgzFile, s"${organization.value}/${name.value}/$sha/$fName"),
