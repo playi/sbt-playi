@@ -35,11 +35,6 @@ addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.4")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "0.7.1")
 
-// This included to get rid of that stoopid NPE when starting sbt
-libraryDependencies ++= Seq(
-  "org.joda" % "joda-convert" % "1.2"
-)
-
 S3Resolver.defaults
 
 // S3 Resolver settings
