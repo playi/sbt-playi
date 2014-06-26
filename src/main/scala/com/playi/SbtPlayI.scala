@@ -32,8 +32,6 @@ object SbtPlayI extends Plugin {
     coreBuildSettings       ++ 
     PlayIBuildInfo.settings ++ 
     Resolvers.settings      ++ 
-    PlayIS3Upload.settings  ++ 
-    PlayIRelease.settings   ++
     net.virtualvoid.sbt.graph.Plugin.graphSettings
 }
 
