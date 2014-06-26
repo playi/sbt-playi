@@ -196,7 +196,7 @@ object Resolvers {
   val mavenCentral      = "Maven Central"         at "http://repo1.maven.org/maven2"
   
   val sonatypeSnapshots = "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
-  val sonatypeReleases  = "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/releases"
+  val sonatypeReleases  = "Sonatype OSS Releases"  at "https://oss.sonatype.org/content/repositories/releases"
 
   val publicResolvers = Seq(mavenCentral, typesafeReleases, typesafeSnapshots, sonatypeReleases, sonatypeSnapshots)
 
