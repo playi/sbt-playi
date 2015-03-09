@@ -282,6 +282,7 @@ object PlayIS3Upload {
   lazy val settings = branch match {
     case "prod"   => prodSettings 
     case "master" => masterSettings
+    case "alpha"  => masterSettings
     case branch   => defaultSettings(branch)
   }
 }
