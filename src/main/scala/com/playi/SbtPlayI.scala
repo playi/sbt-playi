@@ -32,6 +32,7 @@ object SbtPlayI extends Plugin {
     coreBuildSettings       ++ 
     PlayIBuildInfo.settings ++ 
     Resolvers.settings      ++ 
+    LogbackProperties.settings ++
     net.virtualvoid.sbt.graph.Plugin.graphSettings
 }
 
@@ -119,6 +120,42 @@ object PlayIBuildInfo {
   val settings: sbt.Def.SettingsDefinition = Seq(buildInfoFileSetting, buildInfoTask)
 }
 
+/********************************************************************
+*   Configuration for creating a logback.properties file
+********************************************************************/
+object LogbackProperties {
+  import java.io._
+  import java.util._
+  import java.text._
+
+  val logbackPropsFile = settingKey[String]("Where to write the logback.properties file")
+  val logbackPropsFileSetting = logbackPropsFile := "src/main/resources/logback.properties"
+
+  val logbackProps = taskKey[File]("A sample string task.")
+  val logbackPropsTask = logbackProps := {
+    val sha = PlayIUtil.getSHA()
+    val branch = PlayIUtil.currBranch
+
+    val file = new File(logbackPropsFile.value)
+    val dir = file.getParentFile()
+    if(!dir.exists())
+      dir.mkdirs()
+
+    if(file.exists())
+      file.delete()
+    file.createNewFile()
+
+    val writer = new PrintWriter(file)
+    writer.write(s"""
+        | serviceName = $name
+        """.stripMargin
+    )
+    writer.close()
+    file
+  }
+
+  val settings: sbt.Def.SettingsDefinition = Seq(logbackPropsFileSetting, logbackPropsTask)
+}
 
 /********************************************************************
 *   Configures the Release settings 
