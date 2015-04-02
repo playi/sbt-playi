@@ -147,7 +147,7 @@ object LogbackProperties {
 
     val writer = new PrintWriter(file)
     writer.write(s"""
-        | serviceName = $name
+        | serviceName = ${name.value}
         """.stripMargin
     )
     writer.close()
