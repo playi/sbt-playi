@@ -67,7 +67,7 @@ object PlayIUtil {
   def getSHA(): String = ("git log --format='%H' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
 
   def currBranch = {
-    sys.env.getOrElse("TRAVIS_BRANCH", {
+    Seq("TRAVIS_BRANCH", "GIT_BRANCH").flatMap(sys.env.get).headOption.getOrElse({
       val current = """\*\s+(\w+)""".r
       "git branch --no-color".lines_!.collect { case current(name) => name }.mkString
     })
