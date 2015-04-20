@@ -70,7 +70,7 @@ object PlayIUtil {
     Seq("TRAVIS_BRANCH", "GIT_BRANCH").flatMap(sys.env.get).headOption.getOrElse({
       val current = """\*\s+(\w+)""".r
       "git branch --no-color".lines_!.collect { case current(name) => name }.mkString
-    })
+    }).split("/").toSeq.lastOption.getOrElse("")
   }
 
 }
