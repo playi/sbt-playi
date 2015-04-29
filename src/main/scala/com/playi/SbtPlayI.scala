@@ -32,8 +32,7 @@ object SbtPlayI extends Plugin {
     coreBuildSettings       ++ 
     PlayIBuildInfo.settings ++ 
     Resolvers.settings      ++ 
-    LogbackProperties.settings ++
-    net.virtualvoid.sbt.graph.Plugin.graphSettings
+    LogbackProperties.settings
 }
 
 
