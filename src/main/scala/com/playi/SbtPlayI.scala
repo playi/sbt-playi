@@ -28,10 +28,10 @@ object SbtPlayI extends Plugin {
     )
   )
 
-  def PlayISettings = 
-    coreBuildSettings       ++ 
-    PlayIBuildInfo.settings ++ 
-    Resolvers.settings      ++ 
+  def PlayISettings =
+    coreBuildSettings       ++
+    PlayIBuildInfo.settings ++
+    Resolvers.settings      ++
     LogbackProperties.settings
 }
 
@@ -157,7 +157,7 @@ object LogbackProperties {
 }
 
 /********************************************************************
-*   Configures the Release settings 
+*   Configures the Release settings
 ********************************************************************/
 object PlayIRelease {
 
@@ -170,7 +170,7 @@ object PlayIRelease {
   import com.typesafe.sbt.SbtNativePackager._
   import NativePackagerKeys._
 
-  //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66): 
+  //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66):
   def releaseTask[T](key: TaskKey[T]) = { state: State =>
     Project.extract(state).runTask(key, state)
     state
@@ -231,7 +231,7 @@ object Resolvers {
   val typesafeReleases  = "Typesafe Releases"     at "http://repo.typesafe.com/typesafe/releases/"
   val typesafeSnapshots = "Typesafe Snapshots"    at "http://repo.typesafe.com/typesafe/snapshots/"
   val mavenCentral      = "Maven Central"         at "http://repo1.maven.org/maven2"
-  
+
   val sonatypeSnapshots = "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
   val sonatypeReleases  = "Sonatype OSS Releases"  at "https://oss.sonatype.org/content/repositories/releases"
 
@@ -317,7 +317,7 @@ object PlayIS3Upload {
 
 
   lazy val settings = branch match {
-    case "prod"   => prodSettings 
+    case "prod"   => prodSettings
     case "master" => masterSettings
     case "alpha"  => masterSettings
     case branch   => defaultSettings(branch)
