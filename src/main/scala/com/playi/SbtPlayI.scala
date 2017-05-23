@@ -16,7 +16,7 @@ object SbtPlayI extends Plugin {
     version := PlayIUtil.getSHA(),
     crossPaths := false,
     shellPrompt  := ShellPrompt.buildShellPrompt,
-    resolvers := Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
+    resolvers ++= Resolvers.publicResolvers ++ Seq(Resolvers.playIReleases.value, Resolvers.playISnapshots.value),
     scalacOptions ++= Seq(
       "-unchecked",
       "-deprecation",
@@ -231,11 +231,19 @@ object Resolvers {
   val typesafeReleases  = "Typesafe Releases"     at "http://repo.typesafe.com/typesafe/releases/"
   val typesafeSnapshots = "Typesafe Snapshots"    at "http://repo.typesafe.com/typesafe/snapshots/"
   val mavenCentral      = "Maven Central"         at "http://repo1.maven.org/maven2"
+  val jcenterRepo       = "jcenter"               at "https://jcenter.bintray.com/"
 
   val sonatypeSnapshots = "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
   val sonatypeReleases  = "Sonatype OSS Releases"  at "https://oss.sonatype.org/content/repositories/releases"
 
-  val publicResolvers = Seq(mavenCentral, typesafeReleases, typesafeSnapshots, sonatypeReleases, sonatypeSnapshots)
+  val publicResolvers = Seq(
+    mavenCentral,
+    typesafeReleases,
+    typesafeSnapshots,
+    sonatypeReleases,
+    sonatypeSnapshots,
+    jcenterRepo
+  )
 
   val playIReleases: Def.Initialize[Resolver] = Def.setting {
     toSbtResolver( s3resolver.value("PlayI Releases", s3("playi-releases")).withIvyPatterns )
