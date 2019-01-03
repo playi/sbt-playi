@@ -23,7 +23,7 @@ resolvers ++= Seq("Typesafe Plugin Repository" at "http://repo.typesafe.com/type
                   "SBT plugin releases"        at "http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases/"
 )
 
-addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.11.0")
+addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.17.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-s3" % "0.7")
 
