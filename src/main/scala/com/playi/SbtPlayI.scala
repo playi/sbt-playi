@@ -6,9 +6,9 @@ import com.amazonaws.auth._
 import com.amazonaws.services.s3.model.Region
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.sbt.SbtNativePackager._
-import NativePackagerKeys._
+import scala.sys.process._
 
-object SbtPlayI extends Plugin {
+object SbtPlayI extends AutoPlugin {
 
   lazy val coreBuildSettings = Seq(
     organization := "com.playi",
@@ -45,6 +45,8 @@ object PlayIUtil {
     def info (s: => String) {}
     def error (s: => String) { }
     def buffer[T] (f: => T): T = f
+    def err(s: => String): Unit = { }
+    def out(s: => String): Unit = { }
   }
 
   def addSnapshot(versionStr: String): String = {
@@ -63,12 +65,12 @@ object PlayIUtil {
     versionStr + dateStr
   }
 
-  def getSHA(): String = ("git log --format='%H' -n 1" lines_! devnull headOption) getOrElse "-" replaceAll("'","")
+  def getSHA(): String = ("git log --format='%H' -n 1" lineStream_! devnull headOption) getOrElse "-" replaceAll("'","")
 
   def currBranch = {
     Seq("TRAVIS_BRANCH", "GIT_BRANCH").flatMap(sys.env.get).headOption.getOrElse({
       val current = """\*\s+(\w+)""".r
-      "git branch --no-color".lines_!.collect { case current(name) => name }.mkString
+      "git branch --no-color".lineStream_!.collect { case current(name) => name }.mkString
     }).split("/").toSeq.lastOption.getOrElse("")
   }
 
@@ -162,13 +164,16 @@ object LogbackProperties {
 object PlayIRelease {
 
   import sbtrelease._
-  import sbtrelease.ReleaseStep
   import sbtrelease.ReleasePlugin._
-  import sbtrelease.ReleasePlugin.ReleaseKeys._
+  import sbtrelease.ReleasePlugin.autoImport._
+  import sbtrelease.ReleasePlugin.autoImport.ReleaseKeys._
   import ReleaseStateTransformations._
   import com.typesafe.sbt.S3Plugin._
   import com.typesafe.sbt.SbtNativePackager._
-  import NativePackagerKeys._
+  import com.typesafe.sbt.SbtNativePackager.autoImport._
+  import com.typesafe.sbt.packager.Keys.packageZipTarball
+  import com.typesafe.sbt.S3Plugin._
+  import com.typesafe.sbt.S3Plugin.autoImport._
 
   //sbtrelease.releaseTask() does not work, this does (https://github.com/sbt/sbt-release/issues/66):
   def releaseTask[T](key: TaskKey[T]) = { state: State =>
@@ -181,10 +186,10 @@ object PlayIRelease {
     releaseTask[File](PlayIBuildInfo.buildInfo),
     releaseTask[File](LogbackProperties.logbackProps),
     releaseTask[File](packageZipTarball in Universal),
-    releaseTask[Unit](S3.upload)
+    releaseTask[Seq[String]](s3Upload)
   )
 
-  lazy val settings = releaseSettings ++ Seq(
+  lazy val settings = ReleasePlugin.projectSettings ++ Seq(
     releaseProcess := releaseSteps
   )
 }
@@ -213,8 +218,9 @@ object Resolvers {
 
   import ohnosequences.sbt._
   import ohnosequences.sbt.SbtS3Resolver._
+  import ohnosequences.sbt.SbtS3Resolver.autoImport._
 
-  val settings = S3Resolver.defaults ++ Seq(
+  val settings = projectSettings ++ Seq(
     // S3 Resolver settings
     s3credentials := new DefaultAWSCredentialsProviderChain(),
     isSnapshot                  := true,
@@ -284,13 +290,15 @@ object PlayIAssembly {
 object PlayIS3Upload {
 
   import com.typesafe.sbt.S3Plugin._
+  import com.typesafe.sbt.S3Plugin.autoImport._
+  import com.typesafe.sbt.packager.Keys.packageZipTarball
 
   val s3Repo = "playi-repo.s3.amazonaws.com"
   val branch = PlayIUtil.currBranch
 
-  lazy val coreSettings = s3Settings ++ Seq(
-    S3.progress in S3.upload := true,
-    S3.host in S3.upload := s3Repo,
+  lazy val coreSettings = projectSettings ++ Seq(
+    s3Progress in s3Upload := true,
+    s3Host in s3Upload := s3Repo,
     credentials += {
       val awsCreds = new DefaultAWSCredentialsProviderChain().getCredentials()
       Credentials( "Amazon S3", s3Repo, awsCreds.getAWSAccessKeyId(), awsCreds.getAWSSecretKey() )
@@ -298,7 +306,7 @@ object PlayIS3Upload {
   )
 
   lazy val prodSettings = coreSettings ++ Seq(
-    mappings in S3.upload := {
+    mappings in s3Upload := {
       val tgzFile = (packageZipTarball in Universal).value
       val fName = tgzFile.getName()
       val sha = PlayIUtil.getSHA()
@@ -308,7 +316,7 @@ object PlayIS3Upload {
   )
 
   lazy val masterSettings = coreSettings ++ Seq(
-    mappings in S3.upload := {
+    mappings in s3Upload := {
       val log = streams.value.log
       val tgzFile = (packageZipTarball in Universal).value
       val fName = tgzFile.getName()
@@ -317,9 +325,10 @@ object PlayIS3Upload {
   )
 
   def defaultSettings(branchName: String) = Seq(
-      S3.upload := {
+      s3Upload := {
         val log = streams.value.log
         log.info(s"Skipping s3Upload because build is running against branch: $branchName")
+        Seq()
       }
     )
 
