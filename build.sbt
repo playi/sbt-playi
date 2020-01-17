@@ -37,9 +37,11 @@ publishMavenStyle           := false
 
 publishArtifact in Test     := false
 
-s3region                    := Region.US_West
+s3region                    := Region.EU_Ireland
+
+s3overwrite                 := true
 
 publishTo                   := {
-  Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-public-repo")).withIvyPatterns)
+  Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-releases")).withIvyPatterns)
 }
 
