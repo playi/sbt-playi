@@ -226,7 +226,7 @@ object Resolvers {
     isSnapshot                  := true,
     publishMavenStyle           := false,
     publishArtifact in Test     := false,
-    s3region                    := Region.US_West,
+    s3region                    := Region.EU_Ireland,
     publishTo                   := {
       val target = if(isSnapshot.value) "snapshots" else "releases"
       Some(s3resolver.value("Play-I S3 bucket", s3(s"playi-$target")).withIvyPatterns)
