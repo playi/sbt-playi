@@ -17,7 +17,7 @@ version := "2.0.0"
 
 isSnapshot := false
 
-resolvers ++= Seq("Typesafe Plugin Repository" at "http://repo.typesafe.com/typesafe/releases/",
+resolvers ++= Seq("Typesafe Plugin Repository" at "https://repo.typesafe.com/typesafe/releases/",
                   "SBT plugin releases"        at "http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases/",
                   Resolver.url("sbts3 ivy resolver", url("https://dl.bintray.com/emersonloureiro/sbt-plugins"))(Resolver.ivyStylePatterns)
 )
