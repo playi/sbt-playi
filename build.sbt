@@ -24,7 +24,7 @@ resolvers ++= Seq("Typesafe Plugin Repository" at "https://repo.typesafe.com/typ
 
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.17.0")
 
-addSbtPlugin("cf.janga" % "sbts3" % "0.10.3")
+addSbtPlugin("cf.janga" % "sbts3" % "0.10.5")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.12")
 

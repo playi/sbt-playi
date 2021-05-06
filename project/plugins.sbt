@@ -7,6 +7,9 @@ resolvers += "Typesafe Plugin Repository" at "https://repo.typesafe.com/typesafe
 // The next two lines allow us to use S3 as a repo
 resolvers += Resolver.jcenterRepo
 
+// Sonatype repo for migrating off bintray
+resolvers += Resolver.sonatypeRepo("public")
+
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.17.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.2.2")
